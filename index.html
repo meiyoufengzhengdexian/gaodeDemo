@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>vue gaode demo</title>
+    <script type="text/javascript" src="http://webapi.amap.com/maps?v=1.4.1&key=94e4b1678c9c451bc9ba65778e7f378d&plugin=AMap.DistrictSearch"></script>
+    <script src="vue.js"></script>
+    <style>
+        #map {
+            height: 1000px;
+            width:1000px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="app">
+        省：
+        <select v-model="province">
+            <option disabled value="" selected>--请选择--</option>
+            <option v-for="pro of provinces" :value="pro.adcode">{{pro.name}}</option>
+        </select>
+        市：
+        <select v-model="city">
+            <option disabled value="">--请选择--</option>
+            <option v-for="city of citys" :value="city.adcode">{{city.name}}</option>
+        </select>
+        区：
+        <select v-model="district">
+            <option disabled value="">--请选择--</option>
+
+            <option v-for="dist of districts" :value="dist.adcode">{{dist.name}}</option>
+        </select>
+        街道：
+        <select v-model="street">
+            <option disabled value="">--请选择--</option>
+
+            <option v-for="str of streets" :value="str.adcode">{{str.name}}</option>
+        </select>
+
+        <div id="map">
+
+        </div>
+    </div>
+
+
+    <script>
+
+        var vm = new Vue({
+            el: "#app",
+            data: {
+                province: '',
+                city: '',
+                district: '',
+                street: '',
+                citys: [],
+                provinces: [],
+                streets: [],
+                districts: [],
+                districtSearch: {},
+            },
+            methods: {
+                setMapView: function (center, boundaries) {
+                    this.map.clearMap();
+                    this.map.setCenter(center);
+
+                    new AMap.Polygon({
+                        map: this.map,
+                        strokeWeight: 1,
+                        path: boundaries,
+                        fillOpacity: 0.7,
+                        fillColor: '#CCF3FF',
+                        strokeColor: '#CC66CC'
+                    })
+                    this.map.setFitView();
+                }
+            },
+            watch: {
+                province: function (data) {
+                    //省级发生改变
+                    this.citys = [];
+                    this.districts = [];
+                    this.streets = [];
+
+                    this.city = '';
+                    this.district = '';
+                    this.street = '';
+
+                    let _this = this;
+                    _this.districtSearch.setLevel('province');
+                    _this.districtSearch.search(data, function (status, res) {
+                        if (status === 'complete') {
+                            _this.citys = res.districtList[0].districtList;
+                            _this.setMapView(res.districtList[0].center, res.districtList[0].boundaries);
+                        }
+                    });
+                },
+                city: function (data) {
+                    //省级发生改变
+                    this.districts = [];
+                    this.streets = [];
+
+                    this.street = '';
+                    this.district = '';
+
+                    let _this = this;
+                    _this.districtSearch.setLevel('city');
+                    _this.districtSearch.search(data, function (status, res) {
+                        if (status === 'complete') {
+                            _this.districts = res.districtList[0].districtList;
+
+                            _this.setMapView(res.districtList[0].center, res.districtList[0].boundaries);
+                        }
+                    });
+                },
+                district: function (data) {
+                    //区级发生改变
+                    this.streets = [];
+
+                    let _this = this;
+                    _this.districtSearch.setLevel('district');
+                    _this.districtSearch.search(data, function (status, res) {
+                        if (status === 'complete') {
+                            _this.streets = res.districtList[0].districtList;
+                            _this.setMapView(res.districtList[0].center, res.districtList[0].boundaries);
+                        }
+                    });
+                }
+            },
+            mounted: function () {
+                var _this = this;
+                map = new AMap.Map('map', {
+                    resizeEnable: true,
+                    zoom: 5
+                });
+                _this.map = map;
+                AMap.service('AMap.DistrictSearch', function () {
+                    _this.districtSearch = new AMap.DistrictSearch({
+                        extensions: 'all'
+                    });
+                    _this.districtSearch.setLevel('country');
+                    _this.districtSearch.setSubDistrict = 1;
+                    _this.districtSearch.search('中国', function (status, res, list) {
+                        if (status === 'complete') {
+                            var list = res.districtList[0].districtList;
+                            _this.provinces = list;
+                        }
+                    });
+                });
+            },
+        });
+
+    </script>
+</body>
+
+</html>
